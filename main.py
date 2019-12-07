@@ -1,6 +1,6 @@
 import operator
 from functools import reduce
-from collections import Counter
+from collections import Counter, defaultdict
 from math import floor
 
 # 1
@@ -319,3 +319,47 @@ def day_5_a_b():
 
     print(f'Running: {op_code}, with: {parameters}')
     it = op_code_mapping[op_code](it, data, *parameters)
+
+def day_6_a():
+  graph = defaultdict(list)
+
+  with open('input6.txt') as f:
+    orbits = f.read().split('\n')
+    for orbit in orbits:
+      a, b = orbit.split(')')
+      graph[a].append(b)
+
+  queue = ['COM']
+  orbiting = {'COM': 0}
+  def bfs():
+    while queue:
+      node = queue.pop(0)
+      for neighbour in graph[node]:
+        orbiting[neighbour] = orbiting[node] + 1
+        queue.append(neighbour)
+  
+  bfs()
+  return sum(orbiting.values())
+
+def day_6_b():
+  graph = defaultdict(list)
+
+  with open('input6.txt') as f:
+    orbits = f.read().split('\n')
+    for orbit in orbits:
+      a, b = orbit.split(')')
+      graph[a].append(b)
+      graph[b].append(a)
+
+  queue = ['YOU']
+  orbiting = {'YOU': 0}
+  def bfs():
+    while queue:
+      node = queue.pop(0)
+      for neighbour in graph[node]:
+        if neighbour not in orbiting:
+          orbiting[neighbour] = orbiting[node] + 1
+          queue.append(neighbour)
+  
+  bfs()
+  return orbiting['SAN']
