@@ -1,7 +1,10 @@
 import operator
 from functools import reduce
+from itertools import permutations
 from collections import Counter, defaultdict
 from math import floor
+
+from advent.machine import Machine
 
 # 1
 def day_1_a():
@@ -219,7 +222,14 @@ def day_4_a_and_b():
   return counter
 
 
-def day_5_a_b():
+def day_5_a_b(
+  file_name='input5.txt', 
+  inputs=None, 
+  results=False, 
+  yield_mode=False
+):
+  if results:
+    results = []
   def decode_op_code(op_code):
     decoded_op_code = []
     for i in range(5):
@@ -236,47 +246,55 @@ def day_5_a_b():
 
   def opcode_1(it, data, a, b, z,  *not_used_params) -> int:
     data[z] = a + b
-    return it + 4
+    return it + 4, None
 
   def opcode_2(it, data, a, b, z, *not_used_params) -> int:
     data[z] = a * b
-    return it + 4
+    return it + 4, None
 
-  def opcode_3(it, data, parameter, *not_used_params) -> int:
-    user_input = int(input())
+  def opcode_3(it, data, parameter, *not_used_params, yield_input=None):
+    if yield_input:
+      user_input = yield_input
+    elif inputs:
+      user_input = inputs.pop(0)
+    else:
+      user_input = int(input())
     data[parameter] = user_input
-    return it + 2
+    return it + 2, None
 
   def opcode_4(it, data, parameter, *not_used_params) -> int:
-    print(parameter)
-    return it + 2
+    if type(results) == list:
+      results.append(parameter)
+    else:
+      print(parameter)
+    return it + 2, parameter
 
   def opcode_5(it, data, condition, parameter, *not_used_params):
     if condition != 0:
-      return parameter
-    return it + 3
+      return parameter, None
+    return it + 3, None
 
   def opcode_6(it, data, condition, parameter, *not_used_params):
     if condition == 0:
-      return parameter
-    return it + 3
+      return parameter, None
+    return it + 3, None
 
   def opcode_7(it, data, first, second, parameter):
     if first < second:
       data[parameter] = 1
     else:
       data[parameter] = 0
-    return it + 4
+    return it + 4, None
 
   def opcode_8(it, data, first, second, parameter):
     if first == second:
       data[parameter] = 1
     else:
       data[parameter] = 0
-    return it + 4
+    return it + 4, None
 
 
-  with open('input5.txt') as f:
+  with open(file_name) as f:
     data = f.read().split(',')
     data = [int(d) for d in data]
 
@@ -306,19 +324,31 @@ def day_5_a_b():
   it = 0
   while True:
     op_code = data[it]
-    print(f'iteration: {it}, opcode: {op_code}')
+    # print(f'iteration: {it}, opcode: {op_code}')
     op_code, parameter_types = decode_op_code(op_code)
     if op_code == 99:
+      if results:
+        return results
       return data[0]
-    print(parameter_types, data[it + 1: it + op_code_length[op_code] + 1])
+    # print(parameter_types, data[it + 1: it + op_code_length[op_code] + 1])
     
     parameters = [
       value if typ == 1 else data[value]
       for typ, value in zip(parameter_types, data[it + 1: it + op_code_length[op_code]+1])
     ]
+    extra_parameters = {}
 
-    print(f'Running: {op_code}, with: {parameters}')
-    it = op_code_mapping[op_code](it, data, *parameters)
+    if yield_mode and op_code == 3:
+      yield_input = yield
+      print(yield_input)
+      extra_parameters['yield_input'] = yield_input
+
+    # print(f'Running: {op_code}, with: {parameters}')
+    it, result = op_code_mapping[op_code](it, data, *parameters, **extra_parameters)
+
+    if yield_mode and result != None:
+      yield result
+    
 
 def day_6_a():
   graph = defaultdict(list)
@@ -363,3 +393,77 @@ def day_6_b():
   
   bfs()
   return orbiting['SAN']
+
+
+def day_7_a():
+  max_result = 0
+  for permutation in list(permutations(range(5, 10), 5)):
+    actual_value = 0
+    for value in permutation:
+      results = day_5_a_b(
+        'input7.txt', inputs=[value, actual_value], results=True
+      )
+      actual_value = results[0]
+
+    print(permutation, results[0])
+    if results[0] > max_result:
+      max_result = results[0]
+      max_permutation = permutation
+  
+  print(max_result)
+
+
+def day_7_a_with_machine():
+  max_result = 0
+  for permutation in list(permutations(range(5), 5)):
+    actual_value = 0
+    for value in permutation:
+      m = Machine('input7.txt')
+      m.set_input(value)
+      m.set_input(actual_value)
+      try:
+        actual_value = m.run()
+      except StopIteration as e:
+        actual_value = e.args[0]
+    
+    print(permutation, actual_value)
+    if actual_value > max_result:
+      max_result = actual_value
+  
+  print(max_result)
+
+def day_7_b():
+  max_result = 0
+  check_permutations = list(permutations(range(5, 10), 5))
+  # check_permutations = [[9,7,8,5,6], ]
+  for permutation in check_permutations:
+    machines = []
+    actual_value = 0
+    is_working = True
+    for value, name in zip(permutation, 'abcde'):
+      m = Machine('input7.txt', name)
+      m.set_input(value)
+      m.set_input(actual_value)
+      try:
+        actual_value = m.run()
+      except StopIteration as exc:
+        pass
+      machines.append(m)
+
+    last_thruster = actual_value
+    while is_working:
+      for m in machines:
+        m.set_input(actual_value)
+        try:
+          actual_value = m.run()
+        except StopIteration as exc:
+          if (max_result < last_thruster):
+            max_result = last_thruster
+          is_working = False
+      last_thruster = actual_value
+    
+    print(permutation, last_thruster)
+
+  print(max_result)
+
+day_7_b()
