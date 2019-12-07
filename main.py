@@ -217,3 +217,105 @@ def day_4_a_and_b():
       counter += 1
   
   return counter
+
+
+def day_5_a_b():
+  def decode_op_code(op_code):
+    decoded_op_code = []
+    for i in range(5):
+      decoded_op_code.append(op_code % 10)
+      op_code = op_code // 10
+    
+    op_code = decoded_op_code[0]+10*decoded_op_code[1]
+    length = op_code_length[op_code]
+
+
+    strange = [4, 5, 6]
+    z_parameter = [1] if op_code not in strange else [decoded_op_code[3]]
+    return op_code, decoded_op_code[2:2 + length - 1] + z_parameter  
+
+  def opcode_1(it, data, a, b, z,  *not_used_params) -> int:
+    data[z] = a + b
+    return it + 4
+
+  def opcode_2(it, data, a, b, z, *not_used_params) -> int:
+    data[z] = a * b
+    return it + 4
+
+  def opcode_3(it, data, parameter, *not_used_params) -> int:
+    user_input = int(input())
+    data[parameter] = user_input
+    return it + 2
+
+  def opcode_4(it, data, parameter, *not_used_params) -> int:
+    print(parameter)
+    return it + 2
+
+  def opcode_5(it, data, condition, parameter, *not_used_params):
+    if condition != 0:
+      return parameter
+    return it + 3
+
+  def opcode_6(it, data, condition, parameter, *not_used_params):
+    if condition == 0:
+      return parameter
+    return it + 3
+
+  def opcode_7(it, data, first, second, parameter):
+    if first < second:
+      data[parameter] = 1
+    else:
+      data[parameter] = 0
+    return it + 4
+
+  def opcode_8(it, data, first, second, parameter):
+    if first == second:
+      data[parameter] = 1
+    else:
+      data[parameter] = 0
+    return it + 4
+
+
+  with open('input5.txt') as f:
+    data = f.read().split(',')
+    data = [int(d) for d in data]
+
+  op_code_mapping = {
+    1: opcode_1,
+    2: opcode_2,
+    3: opcode_3,
+    4: opcode_4,
+    5: opcode_5,
+    6: opcode_6,
+    7: opcode_7,
+    8: opcode_8,
+  }
+
+  op_code_length = {
+    1: 3,
+    2: 3,
+    3: 1,
+    4: 1,
+    5: 2,
+    6: 2,
+    7: 3,
+    8: 3,
+    99: 0
+  }
+
+  it = 0
+  while True:
+    op_code = data[it]
+    print(f'iteration: {it}, opcode: {op_code}')
+    op_code, parameter_types = decode_op_code(op_code)
+    if op_code == 99:
+      return data[0]
+    print(parameter_types, data[it + 1: it + op_code_length[op_code] + 1])
+    
+    parameters = [
+      value if typ == 1 else data[value]
+      for typ, value in zip(parameter_types, data[it + 1: it + op_code_length[op_code]+1])
+    ]
+
+    print(f'Running: {op_code}, with: {parameters}')
+    it = op_code_mapping[op_code](it, data, *parameters)
