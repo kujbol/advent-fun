@@ -6,6 +6,8 @@ from math import floor
 
 from advent.machine import Machine
 
+from tasks import *
+
 # 1
 def day_1_a():
   with open('input1.txt') as f:
@@ -466,4 +468,63 @@ def day_7_b():
 
   print(max_result)
 
-day_7_b()
+
+
+def day_8_a():
+  min_count = 10000
+  ones_multiplied_2 = 0
+  layer_image = ''
+
+  with open('input8.txt') as f:
+    x, y = 25, 6
+    layer_size = x * y
+    layer_counter = 0
+    data = f.read()
+
+    layer = defaultdict(lambda: 0)
+    for value in data:
+      layer_counter += 1
+      layer[int(value)] += 1 
+      layer_image = layer_image + str(value)
+      
+      if layer_counter == layer_size:
+        layer_counter = 0
+        if layer[0] < min_count:
+          min_count = layer[0]
+          ones_multiplied_2 = layer[1] * layer[2]
+
+        layer_image = ''
+        layer = defaultdict(lambda: 0)
+
+  print(ones_multiplied_2)
+
+
+def day_8_b():
+  with open('input8.txt') as f:
+    x, y = 25, 6
+    # x, y, = 2,2
+    layer_size = x * y
+    data = f.read()
+    data = reversed(data)
+
+    layer_img = ''
+    canvas = layer_size * ' '
+    
+    for value in data:
+      layer_img = layer_img + value
+      
+      if len(layer_img) == layer_size:
+        new_canvas = ''
+        layer_img = layer_img[::-1]
+        print(layer_img)
+        for new_pixel, old_pixel in zip(layer_img, canvas):
+          if new_pixel == '2':
+            new_canvas += old_pixel
+          else:
+            new_canvas += new_pixel
+        canvas = new_canvas
+        layer_img = ''
+    
+  for i in range(y):
+    row = canvas[i*x: (i+1)*x]
+    print(row.replace('0', ' '))
